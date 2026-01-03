@@ -1,0 +1,216 @@
+package com.example.healthcaremanager.ui.screens
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.example.healthcaremanager.data.entity.Appointment
+import com.example.healthcaremanager.navigation.Screen
+import com.example.healthcaremanager.viewmodel.AppointmentViewModel
+import com.example.healthcaremanager.viewmodel.AuthViewModel
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DoctorAppointmentsScreen(
+    navController: NavController,
+    authViewModel: AuthViewModel = viewModel(),
+    appointmentViewModel: AppointmentViewModel = viewModel()
+) {
+    val appointments by appointmentViewModel.appointments.collectAsState()
+    var selectedTab by remember { mutableStateOf(0) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(selectedTab) {
+        when (selectedTab) {
+            0 -> appointmentViewModel.loadPendingAppointments(authViewModel.getCurrentUserId())
+            1 -> appointmentViewModel.loadDoctorAppointments(authViewModel.getCurrentUserId())
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Appointments") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, "Back")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            TabRow(selectedTabIndex = selectedTab) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("Pending") }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("All Appointments") }
+                )
+            }
+
+            if (appointments.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No appointments found")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(appointments) { appointment ->
+                        var patientName by remember { mutableStateOf("Loading...") }
+
+                        LaunchedEffect(appointment.patientId) {
+                            scope.launch {
+                                patientName = appointmentViewModel.getPatientName(appointment.patientId)
+                            }
+                        }
+
+                        DoctorAppointmentCard(
+                            appointment = appointment,
+                            patientName = patientName,
+                            onApprove = { appointmentViewModel.approveAppointment(appointment.id) },
+                            onReject = { appointmentViewModel.rejectAppointment(appointment.id) },
+                            onComplete = { appointmentViewModel.completeAppointment(appointment.id) },
+                            onAddRecord = {
+                                navController.navigate(Screen.AddMedicalRecord.createRoute(appointment.id))
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DoctorAppointmentCard(
+    appointment: Appointment,
+    patientName: String,
+    onApprove: () -> Unit,
+    onReject: () -> Unit,
+    onComplete: () -> Unit,
+    onAddRecord: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Patient: $patientName",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Date: ${SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date(appointment.dateTime))}",
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Status: ${appointment.status.name}",
+                fontSize = 14.sp,
+                color = when (appointment.status.name) {
+                    "APPROVED" -> MaterialTheme.colorScheme.primary
+                    "PENDING" -> MaterialTheme.colorScheme.secondary
+                    "COMPLETED" -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.error
+                },
+                fontWeight = FontWeight.Medium
+            )
+            if (appointment.notes.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Notes: ${appointment.notes}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            when (appointment.status.name) {
+                "PENDING" -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onReject,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Reject")
+                        }
+                        Button(
+                            onClick = onApprove,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Approve")
+                        }
+                    }
+                }
+                "APPROVED" -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = onComplete,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Mark Complete")
+                        }
+                        Button(
+                            onClick = onAddRecord,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Add Record")
+                        }
+                    }
+                }
+                "COMPLETED" -> {
+                    Button(
+                        onClick = onAddRecord,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("View/Edit Record")
+                    }
+                }
+            }
+        }
+    }
+}
+
+
