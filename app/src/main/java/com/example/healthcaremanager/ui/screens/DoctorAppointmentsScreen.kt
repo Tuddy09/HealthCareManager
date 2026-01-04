@@ -1,14 +1,21 @@
 package com.example.healthcaremanager.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -18,6 +25,7 @@ import com.example.healthcaremanager.data.entity.Appointment
 import com.example.healthcaremanager.navigation.Screen
 import com.example.healthcaremanager.viewmodel.AppointmentViewModel
 import com.example.healthcaremanager.viewmodel.AuthViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -43,30 +51,60 @@ fun DoctorAppointmentsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Appointments") },
+                title = { Text("Appointments", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                )
             )
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
         ) {
-            TabRow(selectedTabIndex = selectedTab) {
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
+            ) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Pending") }
+                    text = {
+                        Text(
+                            "Pending",
+                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    icon = {
+                        Badge(
+                            containerColor = if (selectedTab == 0) MaterialTheme.colorScheme.primary else Color.Transparent
+                        ) {
+                            Icon(Icons.Default.Schedule, contentDescription = null)
+                        }
+                    }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("All Appointments") }
+                    text = {
+                        Text(
+                            "All Appointments",
+                            fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    icon = {
+                        Icon(Icons.Default.List, contentDescription = null)
+                    }
                 )
             }
 
@@ -75,7 +113,19 @@ fun DoctorAppointmentsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No appointments found")
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.CalendarToday,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "No appointments found",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             } else {
                 LazyColumn(
@@ -84,8 +134,9 @@ fun DoctorAppointmentsScreen(
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(appointments) { appointment ->
+                    itemsIndexed(appointments) { index, appointment ->
                         var patientName by remember { mutableStateOf("Loading...") }
+                        var isVisible by remember { mutableStateOf(false) }
 
                         LaunchedEffect(appointment.patientId) {
                             scope.launch {
@@ -93,16 +144,30 @@ fun DoctorAppointmentsScreen(
                             }
                         }
 
-                        DoctorAppointmentCard(
-                            appointment = appointment,
-                            patientName = patientName,
-                            onApprove = { appointmentViewModel.approveAppointment(appointment.id) },
-                            onReject = { appointmentViewModel.rejectAppointment(appointment.id) },
-                            onComplete = { appointmentViewModel.completeAppointment(appointment.id) },
-                            onAddRecord = {
-                                navController.navigate(Screen.AddMedicalRecord.createRoute(appointment.id))
-                            }
-                        )
+                        LaunchedEffect(Unit) {
+                            delay(index * 80L)
+                            isVisible = true
+                        }
+
+                        AnimatedVisibility(
+                            visible = isVisible,
+                            enter = fadeIn(animationSpec = tween(400)) +
+                                    slideInVertically(
+                                        initialOffsetY = { it / 2 },
+                                        animationSpec = tween(400)
+                                    )
+                        ) {
+                            DoctorAppointmentCard(
+                                appointment = appointment,
+                                patientName = patientName,
+                                onApprove = { appointmentViewModel.approveAppointment(appointment.id) },
+                                onReject = { appointmentViewModel.rejectAppointment(appointment.id) },
+                                onComplete = { appointmentViewModel.completeAppointment(appointment.id) },
+                                onAddRecord = {
+                                    navController.navigate(Screen.AddMedicalRecord.createRoute(appointment.id))
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -119,93 +184,199 @@ fun DoctorAppointmentCard(
     onComplete: () -> Unit,
     onAddRecord: () -> Unit
 ) {
+    val statusColor = when (appointment.status.name) {
+        "APPROVED" -> Color(0xFF66BB6A)
+        "PENDING" -> Color(0xFFFF9800)
+        "COMPLETED" -> Color(0xFF42A5F5)
+        else -> Color(0xFFEF5350)
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = "Patient: $patientName",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+            // Status indicator bar
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(statusColor)
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Date: ${SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date(appointment.dateTime))}",
-                fontSize = 14.sp
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Status: ${appointment.status.name}",
-                fontSize = 14.sp,
-                color = when (appointment.status.name) {
-                    "APPROVED" -> MaterialTheme.colorScheme.primary
-                    "PENDING" -> MaterialTheme.colorScheme.secondary
-                    "COMPLETED" -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.error
-                },
-                fontWeight = FontWeight.Medium
-            )
-            if (appointment.notes.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Notes: ${appointment.notes}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            when (appointment.status.name) {
-                "PENDING" -> {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onReject,
-                            modifier = Modifier.weight(1f)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(statusColor.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("Reject")
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = statusColor,
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
-                        Button(
-                            onClick = onApprove,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Approve")
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = patientName,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Patient",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
+
+                    // Status badge
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = statusColor.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            text = appointment.status.name,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = statusColor
+                        )
+                    }
                 }
-                "APPROVED" -> {
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.CalendarToday,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date(appointment.dateTime)),
+                        fontSize = 14.sp
+                    )
+                }
+
+                if (appointment.notes.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalAlignment = Alignment.Top
                     ) {
-                        Button(
-                            onClick = onComplete,
-                            modifier = Modifier.weight(1f)
+                        Icon(
+                            Icons.Default.Notes,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = appointment.notes,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                when (appointment.status.name) {
+                    "PENDING" -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Mark Complete")
+                            OutlinedButton(
+                                onClick = onReject,
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFFEF5350)
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Reject")
+                            }
+                            Button(
+                                onClick = onApprove,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Approve")
+                            }
                         }
+                    }
+                    "APPROVED" -> {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = onComplete,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Complete")
+                            }
+                            Button(
+                                onClick = onAddRecord,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF7E57C2)
+                                )
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Add Record")
+                            }
+                        }
+                    }
+                    "COMPLETED" -> {
                         Button(
                             onClick = onAddRecord,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF7E57C2)
+                            )
                         ) {
-                            Text("Add Record")
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("View/Edit Record")
                         }
-                    }
-                }
-                "COMPLETED" -> {
-                    Button(
-                        onClick = onAddRecord,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("View/Edit Record")
                     }
                 }
             }
