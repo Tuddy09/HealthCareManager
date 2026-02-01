@@ -5,41 +5,45 @@ A comprehensive native Android application built with Jetpack Compose and Kotlin
 
 ## Features
 
-### 👤 Patient Features
-- **Registration & Login**: Secure authentication with local database storage using Room
-- **Appointment Booking**: Book appointments with available doctors
-- **Appointment Management**: View appointment status (Pending/Approved/Completed)
-- **Medical Records**: Access and view health records, prescriptions, and past visits
-- **Medication Reminders**: Set and manage medication schedules with notifications
-- **Health Tips**: Access general health and wellness information
+### For Patients 👤
+| Feature | Description | Screen |
+|---------|-------------|--------|
+| **Register** | Create account with personal details | RegisterScreen |
+| **Login** | Secure authentication | LoginScreen |
+| **Dashboard** | Main menu with all features | PatientHomeScreen |
+| **Book Appointment** | Select doctor and schedule | BookAppointmentScreen |
+| **View Appointments** | Track all bookings and status | AppointmentsListScreen |
+| **Medical Records** | Access health history | MedicalRecordsScreen |
+| **Medication Reminders** | Manage medicine schedules | MedicationRemindersScreen |
+| **Add Reminder** | Create new medication alert | AddReminderScreen |
+| **Health Tips** | Read wellness advice | HealthTipsScreen |
 
-### 👨‍⚕️ Doctor Features
-- **Registration & Login**: Separate portal for doctor authentication
-- **Appointment Management**: 
-  - View pending appointment requests
-  - Approve or reject appointments
-  - Mark appointments as completed
-- **Patient Record Management**: Add and update medical diagnoses, prescriptions, and treatment notes
+### For Doctors 👨‍⚕️
+| Feature | Description | Screen |
+|---------|-------------|--------|
+| **Register** | Create doctor account | RegisterScreen |
+| **Login** | Secure authentication | LoginScreen |
+| **Dashboard** | Doctor control panel | DoctorHomeScreen |
+| **View Appointments** | See all bookings (Pending/All) | DoctorAppointmentsScreen |
+| **Approve/Reject** | Manage appointment requests | DoctorAppointmentsScreen |
+| **Mark Complete** | Update appointment status | DoctorAppointmentsScreen |
+| **Add Medical Record** | Document patient consultation | AddMedicalRecordScreen |
+| **Health Tips** | Access wellness information | HealthTipsScreen |
 
 ## Technology Stack
 
-### Core Technologies
-- **Language**: Kotlin
-- **UI Framework**: Jetpack Compose
-- **Architecture**: MVVM (Model-View-ViewModel)
-- **Database**: Room Database (SQLite)
-- **Navigation**: Navigation Compose
-- **Background Tasks**: WorkManager
-- **Dependency Injection**: Manual DI with Repository Pattern
-
-### Key Dependencies
-- AndroidX Core KTX
-- Jetpack Compose (Material3)
-- Room Database
-- Navigation Compose
-- WorkManager
-- ViewModel Compose
-- Gson
+```
+📱 UI Framework:     Jetpack Compose (Material 3)
+💾 Database:         Room (SQLite)
+🧭 Navigation:       Navigation Compose
+⚡ Async:            Kotlin Coroutines + Flow
+🏗️ Architecture:     MVVM Pattern
+📦 DI:               Manual with Repositories
+⏰ Scheduling:       WorkManager
+🔔 Notifications:    NotificationManager
+💾 Storage:          SharedPreferences
+🎨 Design:           Material Design 3
+```
 
 ## Project Structure
 
@@ -70,7 +74,7 @@ app/src/main/java/com/example/healthcaremanager/
 
 ## Database Schema
 
-### Tables
+### 📊 Tables
 1. **users**: Stores patient and doctor information
 2. **appointments**: Manages appointment bookings
 3. **medical_records**: Stores patient medical history
@@ -78,25 +82,25 @@ app/src/main/java/com/example/healthcaremanager/
 
 ## Setup Instructions
 
-### Prerequisites
+### 📋 Prerequisites
 - Android Studio Hedgehog or later
 - JDK 11 or higher
 - Android SDK API 26 or higher
 
-### Installation
+### 🔧 Installation
 1. Clone the repository
 2. Open the project in Android Studio
 3. Sync Gradle files
 4. Run the app on an emulator or physical device
 
-### First Run
+### 🚀 First Run
 1. Launch the app
 2. Create a new account (Patient or Doctor)
 3. Login with your credentials
 
 ## User Flow
 
-### For Patients:
+### 👤 For Patients:
 1. Register and log in
 2. Browse available doctors
 3. Book an appointment
@@ -104,7 +108,7 @@ app/src/main/java/com/example/healthcaremanager/
 5. View medical records after consultation
 6. Set medication reminders
 
-### For Doctors:
+### 👨‍⚕️ For Doctors:
 1. Register and log in as a doctor
 2. View pending appointment requests
 3. Approve/reject appointments
@@ -118,29 +122,34 @@ app/src/main/java/com/example/healthcaremanager/
 
 ## Key Features Implementation
 
-### Authentication
+### 🔐 Authentication
 - Local authentication using Room Database
 - Session management with SharedPreferences
 - Password storage (Note: In production, use encryption)
 
-### Notifications
+### 🔔 Notifications
 - WorkManager for scheduled medication reminders
 - NotificationChannel for Android O and above
 - Customizable reminder times
 
-### Database
+### 💾 Database
 - Room Database for offline data persistence
 - Foreign key relationships between entities
 - Flow-based reactive data updates
 
-## Future Enhancements
-- [ ] Firebase integration for cloud sync
-- [ ] Video consultation feature
-- [ ] PDF export for medical records
-- [ ] Multi-language support
-- [ ] Dark mode
-- [ ] Push notifications for appointment updates
-- [ ] Integration with health tracking devices
+## 🔄 State Management
+
+### AuthViewModel States
+- `Idle` - Initial state
+- `Loading` - Processing request
+- `Success(user)` - Authentication successful
+- `Error(message)` - Authentication failed
+
+### AppointmentViewModel States
+- `Idle` - Initial state
+- `Loading` - Processing appointment
+- `Success(message)` - Operation successful
+- `Error(message)` - Operation failed
 
 ## Security Considerations
 - Passwords should be hashed (implement BCrypt or similar)
@@ -148,12 +157,4 @@ app/src/main/java/com/example/healthcaremanager/
 - Implement proper session timeout
 - Add two-factor authentication
 
-## License
-This project is for educational purposes.
-
-## Contributors
-Developed as a course assignment for Healthcare Management System.
-
-## Support
-For issues or questions, please create an issue in the repository.
 
